@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Сучасний прогноз погоди</title>
+    <!-- Підключаємо сучасний шрифт Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f172a, #1e293b, #334155);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            color: #f8fafc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .weather-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-radius: 28px;
+            padding: 35px;
+            width: 100%;
+            max-width: 380px;
+            text-align: center;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .weather-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .location {
+            font-size: 15px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            color: #94a3b8;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .temp-box {
+            margin: 20px 0;
+        }
+
+        .temp {
+            font-size: 72px;
+            font-weight: 700;
+            letter-spacing: -2px;
+            background: linear-gradient(180deg, #ffffff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .condition {
+            font-size: 20px;
+            font-weight: 600;
+            margin-top: 5px;
+            color: #e2e8f0;
+        }
+
+        .divider {
+            height: 1px;
+            background: rgba(255, 255, 255, 0.1);
+            margin: 25px 0;
+        }
+
+        .details-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .detail-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 15px;
+            border-radius: 16px;
+            text-align: center;
+        }
+
+        .detail-title {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .detail-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #f1f5f9;
+        }
+
+        .footer-note {
+            margin-top: 20px;
+            font-size: 11px;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="weather-card">
+        <div class="location" id="location">
+            <span>📍</span> Визначаємо локацію...
+        </div>
+        
+        <div class="temp-box">
+            <div class="temp" id="temp">--°</div>
+            <div class="condition" id="condition">Завантаження...</div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="details-grid">
+            <div class="detail-item">
+                <div class="detail-title">Вологість</div>
+                <div class="detail-value" id="humidity">--%</div>
+            </div>
+            <div class="detail-item">
+                <div class="detail-title">Вітер</div>
+                <div class="detail-value" id="wind">-- км/год</div>
+            </div>
+        </div>
+
+        <div class="footer-note">Дані: Open-Meteo (найточніші моделі)</div>
+    </div>
+
+    <script>
+        function getWeatherDescription(code) {
+            const weatherCodes = {
+                0: "Ясно ☀️",
+                1: "Переважно ясно 🌤",
+                2: "Мінлива хмарність ⛅",
+                3: "Похмуро ☁️",
+                45: "Туман 🌫",
+                51: "Мряка 🌧",
+                61: "Дощ 🌧",
+                71: "Сніг ❄️",
+                95: "Гроза ⚡"
+            };
+            return weatherCodes[code] || "Хмарно / Опади";
+        }
+
+        function getWeatherData(lat, lon, cityName = "Ваші координати") {
+            document.getElementById('location').innerHTML = `<span>📍</span> ${cityName}`;
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m`;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    const current = data.current;
+                    document.getElementById('temp').innerText = Math.round(current.temperature_2m) + '°';
+                    document.getElementById('condition').innerText = getWeatherDescription(current.weather_code);
+                    document.getElementById('humidity').innerText = current.relative_humidity_2m + '%';
+                    document.getElementById('wind').innerText = current.wind_speed_10m + ' км/год';
+                })
+                .catch(err => {
+                    console.error(err);
+                    document.getElementById('condition').innerText = "Помилка завантаження";
+                });
+        }
+
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                position => {
+                    getWeatherData(position.coords.latitude, position.coords.longitude);
+                },
+                error => {
+                    getWeatherData(47.91, 33.39, "Кривий Ріг");
+                }
+            );
+        } else {
+            getWeatherData(47.91, 33.39, "Кривий Ріг");
+        }
+    </script>
+
+</body>
+</html>
