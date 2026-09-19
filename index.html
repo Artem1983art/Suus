@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Погода у будь-якому куточку світу</title>
+    <title>Погода за IP</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -27,50 +27,36 @@
             max-width: 400px;
             text-align: center;
         }
-        .search-box {
-            display: flex;
-            margin-bottom: 20px;
-            gap: 8px;
-        }
-        .search-box input {
-            flex: 1;
-            padding: 8px 12px;
-            border: 1px solid #ccc;
-            border-radius: 6px;
-            font-size: 14px;
-        }
-        .search-box button {
-            padding: 8px 15px;
-            background: #1a73e8;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        .search-box button:hover {
-            background: #1557b0;
-        }
         h1 {
-            font-size: 20px;
-            margin-bottom: 10px;
+            font-size: 22px;
+            margin-bottom: 5px;
             color: #1a73e8;
         }
+        .country {
+            font-size: 14px;
+            color: #777;
+            margin-bottom: 15px;
+        }
         .current-temp {
-            font-size: 48px;
+            font-size: 52px;
             font-weight: bold;
-            margin: 15px 0;
+            margin: 10px 0;
             color: #333;
         }
         .details {
-            font-size: 16px;
-            color: #666;
+            font-size: 15px;
+            color: #555;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 8px;
             margin-bottom: 20px;
+            display: flex;
+            justify-content: space-around;
         }
         .forecast-title {
             font-size: 18px;
             font-weight: 500;
-            margin-top: 20px;
+            margin-top: 15px;
             margin-bottom: 10px;
             border-top: 1px solid #eee;
             padding-top: 15px;
@@ -94,15 +80,15 @@
 <body>
 
     <div class="container">
-        <!-- Пошук будь-якого міста чи села світу -->
-        <div class="search-box">
-            <input type="text" id="cityInput" placeholder="Введіть місто чи село...">
-            <button onclick="searchByCity()">Шукати</button>
-        </div>
-
-        <h1 id="city">Визначаємо локацію...</h1>
+        <h1 id="city">Визначаємо місто...</h1>
+        <div class="country" id="country"></div>
+        
         <div class="current-temp" id="temp">--°C</div>
-        <div class="details" id="condition">Завантаження даних...</div>
+        
+        <div class="details">
+            <span id="wind">Вітер: -- км/год</span>
+            <span id="humidity">Вологість: --%</span>
+        </div>
 
         <div class="forecast-title">Прогноз на 7 днів</div>
         <div class="forecast-list" id="forecast">
@@ -111,17 +97,35 @@
     </div>
 
     <script>
-        // Функція для завантаження погоди за широтою та довготою
-        async function fetchWeather(lat, lon, locationName) {
+        async function getWeatherData() {
             try {
-                const weatherResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&daily=temperature_2m_max,temperature_2m_min&timezone=auto`);
+                // 1. Автоматично визначаємо місто та координати за IP
+                const ipResponse = await fetch('https://ipapi.co/json/');
+                const ipData = await ipResponse.json();
+                
+                const city = ipData.city || "Невідомо";
+                const country = ipData.country_name || "";
+                const lat = ipData.latitude;
+                const lon = ipData.longitude;
+
+                if (!lat || !lon) {
+                    throw new Error("Не вдалося знайти координати за IP");
+                }
+
+                document.getElementById('city').innerText = city;
+                document.getElementById('country').innerText = country;
+
+                // 2. Отримуємо погоду (текучу та на 7 днів) з Open-Meteo
+                const weatherResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min&timezone=auto`);
                 const weatherData = await weatherResponse.json();
 
-                const currentTemp = Math.round(weatherData.current_weather.temperature);
-                document.getElementById('temp').innerText = `${currentTemp}°C`;
-                document.getElementById('condition').innerText = `Вітер: ${weatherData.current_weather.windspeed} км/год`;
-                document.getElementById('city').innerText = locationName;
+                // Поточні дані
+                const current = weatherData.current;
+                document.getElementById('temp').innerText = `${Math.round(current.temperature_2m)}°C`;
+                document.getElementById('wind').innerText = `Вітер: ${current.wind_speed_10m} км/год`;
+                document.getElementById('humidity').innerText = `Вологість: ${current.relative_humidity_2m}%`;
 
+                // Прогноз на 7 днів
                 const daily = weatherData.daily;
                 let forecastHTML = '';
                 
@@ -140,57 +144,18 @@
                 }
 
                 document.getElementById('forecast').innerHTML = forecastHTML;
+
             } catch (error) {
                 console.error(error);
-                document.getElementById('condition').innerText = "Помилка завантаження погоди.";
+                document.getElementById('city').innerText = "Помилка";
+                document.getElementById('country').innerText = "";
+                document.getElementById('temp').innerText = "--°C";
+                document.getElementById('wind').innerText = "Не вдалося завантажити дані";
+                document.getElementById('humidity').innerText = "";
             }
         }
 
-        // Автоматичне визначення за IP при заході на сайт
-        async function getIPLocation() {
-            try {
-                const ipResponse = await fetch('https://ipapi.co/json/');
-                const ipData = await ipResponse.json();
-                
-                const city = ipData.city || "Невідомо";
-                const country = ipData.country_name || "";
-                
-                if (ipData.latitude && ipData.longitude) {
-                    fetchWeather(ipData.latitude, ipData.longitude, `${city}, ${country}`);
-                } else {
-                    throw new Error("Немає координат");
-                }
-            } catch (error) {
-                // Запасний варіант (наприклад, Київ), якщо IP не визначився
-                fetchWeather(50.4501, 30.5234, "Київ, Україна");
-            }
-        }
-
-        // Ручний пошук через геокодер Open-Meteo (працює для будь-яких сіл і міст світу)
-        async function searchByCity() {
-            const query = document.getElementById('cityInput').value.trim();
-            if (!query) return;
-
-            document.getElementById('city').innerText = "Шукаємо...";
-            try {
-                const geoResponse = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=1&language=uk&format=json`);
-                const geoData = await geoResponse.json();
-
-                if (geoData.results && geoData.results.length > 0) {
-                    const loc = geoData.results[0];
-                    const name = `${loc.name}, ${loc.country || ''}`;
-                    fetchWeather(loc.latitude, loc.longitude, name);
-                } else {
-                    document.getElementById('city').innerText = "Нічого не знайдено";
-                    document.getElementById('temp').innerText = "--°C";
-                    document.getElementById('condition').innerText = "Спробуйте іншу назву";
-                }
-            } catch (error) {
-                document.getElementById('city').innerText = "Помилка пошуку";
-            }
-        }
-
-        getIPLocation();
+        getWeatherData();
     </script>
 </body>
 </html>
