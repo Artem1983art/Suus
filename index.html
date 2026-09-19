@@ -3,286 +3,194 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Погода (Google Style)</title>
+    <title>Погода у будь-якому куточку світу</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
         body {
             font-family: 'Roboto', sans-serif;
-            background-color: #f0f4f9;
-            color: #1f1f1f;
+            background: #f0f2f5;
+            color: #333;
             display: flex;
+            flex-direction: column;
+            align-items: center;
             justify-content: center;
             min-height: 100vh;
+            margin: 0;
             padding: 20px;
         }
-        .weather-container {
+        .container {
+            background: #fff;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             width: 100%;
-            max-width: 480px;
+            max-width: 400px;
+            text-align: center;
+        }
+        .search-box {
             display: flex;
-            flex-direction: column;
-            gap: 16px;
+            margin-bottom: 20px;
+            gap: 8px;
         }
-        .main-card {
-            background: linear-gradient(135deg, #1a73e8, #4285f4);
-            color: #ffffff;
-            border-radius: 24px;
-            padding: 28px;
-            box-shadow: 0 4px 12px rgba(60, 64, 67, 0.15);
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
+        .search-box input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 14px;
         }
-        .location {
-            font-size: 22px;
-            font-weight: 500;
+        .search-box button {
+            padding: 8px 15px;
+            background: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
         }
-        .current-main {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        .search-box button:hover {
+            background: #1557b0;
         }
-        .temp-area {
-            display: flex;
-            align-items: flex-start;
+        h1 {
+            font-size: 20px;
+            margin-bottom: 10px;
+            color: #1a73e8;
         }
-        .temp {
-            font-size: 76px;
-            font-weight: 700;
-            line-height: 1;
+        .current-temp {
+            font-size: 48px;
+            font-weight: bold;
+            margin: 15px 0;
+            color: #333;
         }
-        .temp-unit {
-            font-size: 32px;
-            margin-top: 6px;
-        }
-        .condition-icon {
-            font-size: 64px;
-        }
-        .condition-text {
-            font-size: 18px;
-            font-weight: 500;
-        }
-        .details-card {
-            background: #ffffff;
-            border-radius: 20px;
-            padding: 20px;
-            box-shadow: 0 2px 8px rgba(60, 64, 67, 0.08);
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
-        .detail-item {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-        .detail-label {
-            font-size: 13px;
-            color: #5f6368;
-        }
-        .detail-val {
+        .details {
             font-size: 16px;
-            font-weight: 500;
-            color: #202124;
-        }
-        .forecast-card {
-            background: #ffffff;
-            border-radius: 20px;
-            padding: 20px;
-            box-shadow: 0 2px 8px rgba(60, 64, 67, 0.08);
+            color: #666;
+            margin-bottom: 20px;
         }
         .forecast-title {
-            font-size: 15px;
+            font-size: 18px;
             font-weight: 500;
-            color: #5f6368;
-            margin-bottom: 15px;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            border-top: 1px solid #eee;
+            padding-top: 15px;
+            text-align: left;
         }
         .forecast-list {
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 8px;
         }
         .forecast-item {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            font-size: 15px;
-        }
-        .forecast-day {
-            width: 100px;
-            color: #202124;
-            font-weight: 500;
-        }
-        .forecast-icon {
-            font-size: 20px;
-        }
-        .forecast-temps {
-            display: flex;
-            gap: 15px;
-            font-weight: 500;
-        }
-        .max-t {
-            color: #202124;
-        }
-        .min-t {
-            color: #5f6368;
-        }
-        .footer {
-            text-align: center;
-            font-size: 12px;
-            color: #80868b;
-            margin-top: 10px;
+            background: #f8f9fa;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-size: 14px;
         }
     </style>
 </head>
 <body>
 
-    <div class="weather-container">
-        <div class="main-card">
-            <div class="location" id="location">Визначаємо локацію...</div>
-            <div class="current-main">
-                <div class="temp-area">
-                    <div class="temp" id="temp">--</div>
-                    <div class="temp-unit">°C</div>
-                </div>
-                <div class="condition-icon" id="main-icon">🌡️</div>
-            </div>
-            <div class="condition-text" id="condition">Завантаження даних...</div>
+    <div class="container">
+        <!-- Пошук будь-якого міста чи села світу -->
+        <div class="search-box">
+            <input type="text" id="cityInput" placeholder="Введіть місто чи село...">
+            <button onclick="searchByCity()">Шукати</button>
         </div>
 
-        <div class="details-card">
-            <div class="detail-item">
-                <span class="detail-label">Вологість</span>
-                <span class="detail-val" id="humidity">--%</span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">Швидкість вітру</span>
-                <span class="detail-val" id="wind">-- км/год</span>
-            </div>
-        </div>
+        <h1 id="city">Визначаємо локацію...</h1>
+        <div class="current-temp" id="temp">--°C</div>
+        <div class="details" id="condition">Завантаження даних...</div>
 
-        <div class="forecast-card">
-            <div class="forecast-title">Прогноз на 7 днів</div>
-            <div class="forecast-list" id="forecast-list">
-                <div style="color: #5f6368; font-size: 14px; text-align: center; padding: 10px;">Завантаження прогнозу...</div>
-            </div>
+        <div class="forecast-title">Прогноз на 7 днів</div>
+        <div class="forecast-list" id="forecast">
+            <div class="forecast-item">Завантаження прогнозу...</div>
         </div>
-
-        <div class="footer">Дані погоди від Open-Meteo</div>
     </div>
 
     <script>
-        function getWeatherDescription(code) {
-            const weatherCodes = {
-                0: "Ясно",
-                1: "Переважно ясно",
-                2: "Мінлива хмарність",
-                3: "Похмуро",
-                45: "Туман",
-                51: "Мряка",
-                61: "Дощ",
-                71: "Сніг",
-                95: "Гроза"
-            };
-            return weatherCodes[code] || "Хмарно";
-        }
+        // Функція для завантаження погоди за широтою та довготою
+        async function fetchWeather(lat, lon, locationName) {
+            try {
+                const weatherResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&daily=temperature_2m_max,temperature_2m_min&timezone=auto`);
+                const weatherData = await weatherResponse.json();
 
-        function getWeatherIcon(code) {
-            const icons = {
-                0: "☀️",
-                1: "🌤️",
-                2: "⛅",
-                3: "☁️",
-                45: "🌫️",
-                51: "🌧️",
-                61: "🌧️",
-                71: "❄️",
-                95: "⚡"
-            };
-            return icons[code] || "🌤️";
-        }
+                const currentTemp = Math.round(weatherData.current_weather.temperature);
+                document.getElementById('temp').innerText = `${currentTemp}°C`;
+                document.getElementById('condition').innerText = `Вітер: ${weatherData.current_weather.windspeed} км/год`;
+                document.getElementById('city').innerText = locationName;
 
-        function formatDay(dateString) {
-            const date = new Date(dateString);
-            const today = new Date();
-            if (date.toDateString() === today.toDateString()) {
-                return "Сьогодні";
-            }
-            return date.toLocaleDateString('uk-UA', { weekday: 'long', month: 'numeric', day: 'numeric' });
-        }
+                const daily = weatherData.daily;
+                let forecastHTML = '';
+                
+                for (let i = 0; i < 7; i++) {
+                    const date = new Date(daily.time[i]);
+                    const dayName = date.toLocaleDateString('uk-UA', { weekday: 'short', month: 'numeric', day: 'numeric' });
+                    const maxT = Math.round(daily.temperature_2m_max[i]);
+                    const minT = Math.round(daily.temperature_2m_min[i]);
 
-        function getCityName(lat, lon) {
-            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=uk`)
-                .then(res => res.json())
-                .then(data => {
-                    const address = data.address;
-                    const city = address.city || address.town || address.village || address.municipality || "Ваша локація";
-                    const country = address.country || "";
-                    document.getElementById('location').innerText = `${city}, ${country}`;
-                })
-                .catch(() => {
-                    document.getElementById('location').innerText = "Ваші координати";
-                });
-        }
-
-        function getWeatherData(lat, lon) {
-            getCityName(lat, lon);
-            const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto`;
-
-            fetch(url)
-                .then(response => response.json())
-                .then(data => {
-                    const current = data.current;
-                    document.getElementById('temp').innerText = Math.round(current.temperature_2m);
-                    document.getElementById('condition').innerText = getWeatherDescription(current.weather_code);
-                    document.getElementById('main-icon').innerText = getWeatherIcon(current.weather_code);
-                    document.getElementById('humidity').innerText = current.relative_humidity_2m + '%';
-                    document.getElementById('wind').innerText = current.wind_speed_10m + ' км/год';
-
-                    const daily = data.daily;
-                    let forecastHTML = '';
-                    
-                    for (let i = 0; i < daily.time.length; i++) {
-                        const dayName = formatDay(daily.time[i]);
-                        const icon = getWeatherIcon(daily.weather_code[i]);
-                        const maxTemp = Math.round(daily.temperature_2m_max[i]);
-                        const minTemp = Math.round(daily.temperature_2m_min[i]);
-
-                        forecastHTML += `
-                            <div class="forecast-item">
-                                <span class="forecast-day">${dayName}</span>
-                                <span class="forecast-icon">${icon}</span>
-                                <div class="forecast-temps">
-                                    <span class="max-t">${maxTemp}°</span>
-                                    <span class="min-t">${minTemp}°</span>
-                                </div>
-                            </div>
-                        `;
-                    }
-                    document.getElementById('forecast-list').innerHTML = forecastHTML;
-                })
-                .catch(err => {
-                    console.error(err);
-                    document.getElementById('condition').innerText = "Помилка завантаження даних";
-                });
-        }
-
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                position => {
-                    getWeatherData(position.coords.latitude, position.coords.longitude);
-                },
-                error => {
-                    getWeatherData(47.91, 33.39);
+                    forecastHTML += `
+                        <div class="forecast-item">
+                            <span>${dayName}</span>
+                            <span><b>${maxT}°C</b> / ${minT}°C</span>
+                        </div>
+                    `;
                 }
-            );
-        } else {
-            getWeatherData(47.91, 33.39);
+
+                document.getElementById('forecast').innerHTML = forecastHTML;
+            } catch (error) {
+                console.error(error);
+                document.getElementById('condition').innerText = "Помилка завантаження погоди.";
+            }
         }
+
+        // Автоматичне визначення за IP при заході на сайт
+        async function getIPLocation() {
+            try {
+                const ipResponse = await fetch('https://ipapi.co/json/');
+                const ipData = await ipResponse.json();
+                
+                const city = ipData.city || "Невідомо";
+                const country = ipData.country_name || "";
+                
+                if (ipData.latitude && ipData.longitude) {
+                    fetchWeather(ipData.latitude, ipData.longitude, `${city}, ${country}`);
+                } else {
+                    throw new Error("Немає координат");
+                }
+            } catch (error) {
+                // Запасний варіант (наприклад, Київ), якщо IP не визначився
+                fetchWeather(50.4501, 30.5234, "Київ, Україна");
+            }
+        }
+
+        // Ручний пошук через геокодер Open-Meteo (працює для будь-яких сіл і міст світу)
+        async function searchByCity() {
+            const query = document.getElementById('cityInput').value.trim();
+            if (!query) return;
+
+            document.getElementById('city').innerText = "Шукаємо...";
+            try {
+                const geoResponse = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query)}&count=1&language=uk&format=json`);
+                const geoData = await geoResponse.json();
+
+                if (geoData.results && geoData.results.length > 0) {
+                    const loc = geoData.results[0];
+                    const name = `${loc.name}, ${loc.country || ''}`;
+                    fetchWeather(loc.latitude, loc.longitude, name);
+                } else {
+                    document.getElementById('city').innerText = "Нічого не знайдено";
+                    document.getElementById('temp').innerText = "--°C";
+                    document.getElementById('condition').innerText = "Спробуйте іншу назву";
+                }
+            } catch (error) {
+                document.getElementById('city').innerText = "Помилка пошуку";
+            }
+        }
+
+        getIPLocation();
     </script>
 </body>
 </html>
