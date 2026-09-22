@@ -24,7 +24,7 @@
             border-radius: 12px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             width: 100%;
-            max-width: 400px;
+            max-width: 420px;
             text-align: center;
         }
         h1 {
@@ -70,10 +70,30 @@
         .forecast-item {
             display: flex;
             justify-content: space-between;
+            align-items: center;
             background: #f8f9fa;
             padding: 10px 15px;
             border-radius: 8px;
             font-size: 14px;
+            text-align: left;
+        }
+        .forecast-item.today {
+            background: #e8f0fe;
+            border: 1px solid #d2e3fc;
+        }
+        .forecast-day {
+            font-weight: 500;
+            width: 90px;
+        }
+        .forecast-desc {
+            color: #666;
+            flex-grow: 1;
+            padding: 0 10px;
+            font-size: 13px;
+        }
+        .forecast-temp {
+            font-weight: bold;
+            white-space: nowrap;
         }
         .footer {
             margin-top: 20px;
@@ -101,20 +121,41 @@
             <span id="humidity">Вологість: --%</span>
         </div>
 
-        <div class="forecast-title">Прогноз на 7 днів</div>
+        <div class="forecast-title">Прогноз на тиждень</div>
         <div class="forecast-list" id="forecast">
             <div class="forecast-item">Завантаження прогнозу...</div>
         </div>
 
         <div class="footer">
-            <a href="Policy.html">Політика конфіденційності</a>
+            <a href="policy.html">Політика конфіденційності</a>
         </div>
     </div>
 
     <script>
+        function getWeatherDescription(code) {
+            const weatherCodes = {
+                0: "Ясно",
+                1: "Переважно ясно",
+                2: "Мінлива хмарність",
+                3: "Похмуро",
+                45: "Туман",
+                48: "Іній",
+                51: "Невеликий дощ",
+                53: "Помірний дощ",
+                55: "Сильний дощ",
+                61: "Невеликий дощ",
+                63: "Дощ",
+                65: "Злива",
+                71: "Невеликий сніг",
+                73: "Сніг",
+                75: "Сильний сніг",
+                95: "Гроза"
+            };
+            return weatherCodes[code] ? weatherCodes[code] : "Хмарно";
+        }
+
         async function getWeatherData() {
             try {
-                // 1. Автоматично визначаємо місто та координати за IP
                 const ipResponse = await fetch('https://ipapi.co/json/');
                 const ipData = await ipResponse.json();
                 
@@ -130,30 +171,35 @@
                 document.getElementById('city').innerText = city;
                 document.getElementById('country').innerText = country;
 
-                // 2. Отримуємо погоду (текучу та на 7 днів) з Open-Meteo
-                const weatherResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min&timezone=auto`);
+                const weatherResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto`);
                 const weatherData = await weatherResponse.json();
 
-                // Поточні дані
                 const current = weatherData.current;
                 document.getElementById('temp').innerText = `${Math.round(current.temperature_2m)}°C`;
                 document.getElementById('wind').innerText = `Вітер: ${current.wind_speed_10m} км/год`;
                 document.getElementById('humidity').innerText = `Вологість: ${current.relative_humidity_2m}%`;
 
-                // Прогноз на 7 днів
                 const daily = weatherData.daily;
                 let forecastHTML = '';
                 
-                for (let i = 0; i < 7; i++) {
+                for (let i = 0; i < daily.time.length; i++) {
                     const date = new Date(daily.time[i]);
-                    const dayName = date.toLocaleDateString('uk-UA', { weekday: 'short', month: 'numeric', day: 'numeric' });
+                    const isToday = i === 0;
+                    
+                    let dayName = date.toLocaleDateString('uk-UA', { weekday: 'short', month: 'numeric', day: 'numeric' });
+                    if (isToday) {
+                        dayName = "Сьогодні";
+                    }
+
                     const maxT = Math.round(daily.temperature_2m_max[i]);
                     const minT = Math.round(daily.temperature_2m_min[i]);
+                    const weatherDesc = getWeatherDescription(daily.weather_code[i]);
 
                     forecastHTML += `
-                        <div class="forecast-item">
-                            <span>${dayName}</span>
-                            <span><b>${maxT}°C</b> / ${minT}°C</span>
+                        <div class="forecast-item ${isToday ? 'today' : ''}">
+                            <span class="forecast-day">${dayName}</span>
+                            <span class="forecast-desc">${weatherDesc}</span>
+                            <span class="forecast-temp"><b>${maxT}°C</b> / ${minT}°C</span>
                         </div>
                     `;
                 }
