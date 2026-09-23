@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Погода за IP</title>
+    <title>Точна погода за геолокацією</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -24,7 +24,7 @@
             border-radius: 12px;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             width: 100%;
-            max-width: 420px;
+            max-width: 440px;
             text-align: center;
         }
         h1 {
@@ -74,7 +74,7 @@
             background: #f8f9fa;
             padding: 10px 15px;
             border-radius: 8px;
-            font-size: 14px;
+            font-size: 13px;
             text-align: left;
         }
         .forecast-item.today {
@@ -83,13 +83,12 @@
         }
         .forecast-day {
             font-weight: 500;
-            width: 90px;
+            width: 80px;
         }
         .forecast-desc {
-            color: #666;
+            color: #555;
             flex-grow: 1;
-            padding: 0 10px;
-            font-size: 13px;
+            padding: 0 8px;
         }
         .forecast-temp {
             font-weight: bold;
@@ -111,8 +110,8 @@
 <body>
 
     <div class="container">
-        <h1 id="city">Визначаємо місто...</h1>
-        <div class="country" id="country"></div>
+        <h1 id="city">Визначення локації...</h1>
+        <div class="country" id="country">Будь ласка, дозвольте доступ до геопозиції</div>
         
         <div class="current-temp" id="temp">--°C</div>
         
@@ -121,9 +120,9 @@
             <span id="humidity">Вологість: --%</span>
         </div>
 
-        <div class="forecast-title">Прогноз на тиждень</div>
+        <div class="forecast-title">Прогноз із часовими інтервалами</div>
         <div class="forecast-list" id="forecast">
-            <div class="forecast-item">Завантаження прогнозу...</div>
+            <div class="forecast-item">Очікування доступу до геолокації...</div>
         </div>
 
         <div class="footer">
@@ -143,7 +142,7 @@
                 51: "Невеликий дощ",
                 53: "Помірний дощ",
                 55: "Сильний дощ",
-                61: "Невеликий дощ",
+                61: "Дощ з",
                 63: "Дощ",
                 65: "Злива",
                 71: "Невеликий сніг",
@@ -151,72 +150,117 @@
                 75: "Сильний сніг",
                 95: "Гроза"
             };
-            return weatherCodes[code] ? weatherCodes[code] : "Хмарно";
+            return weatherCodes[code] ? weatherCodes[code] : "Змішано";
         }
 
-        async function getWeatherData() {
-            try {
-                const ipResponse = await fetch('https://ipapi.co/json/');
-                const ipData = await ipResponse.json();
-                
-                const city = ipData.city || "Невідомо";
-                const country = ipData.country_name || "";
-                const lat = ipData.latitude;
-                const lon = ipData.longitude;
+        // Аналізуємо погодинні дані, щоб знайти точний час опадів (наприклад, "Дощ з 14:00 по 18:00")
+        function getHourlyRainTime(hourlyData, targetDayIndex) {
+            const times = hourlyData.time;
+            const codes = hourlyData.weather_code;
+            
+            let rainStart = null;
+            let rainEnd = null;
 
-                if (!lat || !lon) {
-                    throw new Error("Не вдалося знайти координати за IP");
-                }
+            for (let i = 0; i < times.length; i++) {
+                const dateObj = new Date(times[i]);
+                const dayIndex = Math.floor(i / 24);
 
-                document.getElementById('city').innerText = city;
-                document.getElementById('country').innerText = country;
+                if (dayIndex === targetDayIndex) {
+                    const isRain = codes[i] >= 51 && codes[i] <= 65;
+                    const hourStr = dateObj.toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
 
-                const weatherResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto`);
-                const weatherData = await weatherResponse.json();
-
-                const current = weatherData.current;
-                document.getElementById('temp').innerText = `${Math.round(current.temperature_2m)}°C`;
-                document.getElementById('wind').innerText = `Вітер: ${current.wind_speed_10m} км/год`;
-                document.getElementById('humidity').innerText = `Вологість: ${current.relative_humidity_2m}%`;
-
-                const daily = weatherData.daily;
-                let forecastHTML = '';
-                
-                for (let i = 0; i < daily.time.length; i++) {
-                    const date = new Date(daily.time[i]);
-                    const isToday = i === 0;
-                    
-                    let dayName = date.toLocaleDateString('uk-UA', { weekday: 'short', month: 'numeric', day: 'numeric' });
-                    if (isToday) {
-                        dayName = "Сьогодні";
+                    if (isRain) {
+                        if (rainStart === null) rainStart = hourStr;
+                        rainEnd = hourStr;
                     }
-
-                    const maxT = Math.round(daily.temperature_2m_max[i]);
-                    const minT = Math.round(daily.temperature_2m_min[i]);
-                    const weatherDesc = getWeatherDescription(daily.weather_code[i]);
-
-                    forecastHTML += `
-                        <div class="forecast-item ${isToday ? 'today' : ''}">
-                            <span class="forecast-day">${dayName}</span>
-                            <span class="forecast-desc">${weatherDesc}</span>
-                            <span class="forecast-temp"><b>${maxT}°C</b> / ${minT}°C</span>
-                        </div>
-                    `;
                 }
-
-                document.getElementById('forecast').innerHTML = forecastHTML;
-
-            } catch (error) {
-                console.error(error);
-                document.getElementById('city').innerText = "Помилка";
-                document.getElementById('country').innerText = "";
-                document.getElementById('temp').innerText = "--°C";
-                document.getElementById('wind').innerText = "Не вдалося завантажити дані";
-                document.getElementById('humidity').innerText = "";
             }
+
+            if (rainStart !== null) {
+                return `Дощ із ${rainStart} по ${rainEnd}`;
+            }
+            return null;
         }
 
-        getWeatherData();
+        async function initGeolocationWeather() {
+            if (!navigator.geolocation) {
+                document.getElementById('city').innerText = "Помилка";
+                document.getElementById('country').innerText = "Браузер не підтримує геолокацію";
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+
+                    try {
+                        // Отримуємо назву міста через безкоштовне зворотне геокодування
+                        const geoResponse = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=uk`);
+                        const geoData = await geoResponse.json();
+                        
+                        const city = geoData.address.city || geoData.address.town || geoData.address.village || "Ваше місто";
+                        const country = geoData.address.country || "";
+
+                        document.getElementById('city').innerText = city;
+                        document.getElementById('country').innerText = country;
+
+                        // Запитуємо погодинні та денні дані з Open-Meteo
+                        const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m&hourly=weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto`;
+                        const weatherResponse = await fetch(weatherUrl);
+                        const weatherData = await weatherResponse.json();
+
+                        // Поточні значення
+                        const current = weatherData.current;
+                        document.getElementById('temp').innerText = `${Math.round(current.temperature_2m)}°C`;
+                        document.getElementById('wind').innerText = `Вітер: ${current.wind_speed_10m} км/год`;
+                        document.getElementById('humidity').innerText = `Вологість: ${current.relative_humidity_2m}%`;
+
+                        // Формуємо прогноз із розширеним часом опадів
+                        const daily = weatherData.daily;
+                        let forecastHTML = '';
+
+                        for (let i = 0; i < daily.time.length; i++) {
+                            const date = new Date(daily.time[i]);
+                            const isToday = i === 0;
+                            const dayName = isToday ? "Сьогодні" : date.toLocaleDateString('uk-UA', { weekday: 'short', month: 'numeric', day: 'numeric' });
+                            
+                            const maxT = Math.round(daily.temperature_2m_max[i]);
+                            const minT = Math.round(daily.temperature_2m_min[i]);
+
+                            // Перевіряємо, чи є дощ у цей день за годинами
+                            let desc = getHourlyRainTime(weatherData.hourly, i);
+                            if (!desc) {
+                                desc = getWeatherDescription(daily.weather_code[i]);
+                            }
+
+                            forecastHTML += `
+                                <div class="forecast-item ${isToday ? 'today' : ''}">
+                                    <span class="forecast-day">${dayName}</span>
+                                    <span class="forecast-desc">${desc}</span>
+                                    <span class="forecast-temp"><b>${maxT}°C</b> / ${minT}°C</span>
+                                </div>
+                            `;
+                        }
+
+                        document.getElementById('forecast').innerHTML = forecastHTML;
+
+                    } catch (err) {
+                        console.error(err);
+                        document.getElementById('city').innerText = "Помилка даних";
+                        document.getElementById('country').innerText = "Не вдалося завантажити погоду";
+                    }
+                },
+                (error) => {
+                    console.warn(error);
+                    document.getElementById('city').innerText = "Доступ заборонено";
+                    document.getElementById('country').innerText = "Увімкніть геолокацію в браузері";
+                    document.getElementById('forecast').innerHTML = `<div class="forecast-item">Будь ласка, дозвольте доступ до геолокації, щоб побачити погоду.</div>`;
+                }
+            );
+        }
+
+        initGeolocationWeather();
     </script>
 </body>
 </html>
