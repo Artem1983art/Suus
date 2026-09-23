@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Точна погода за геолокацією</title>
+    <title>Погода за геолокацією</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -52,6 +52,22 @@
             margin-bottom: 20px;
             display: flex;
             justify-content: space-around;
+        }
+        .geo-btn {
+            background: #1a73e8;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 20px;
+            font-weight: 500;
+            width: 100%;
+            box-shadow: 0 2px 5px rgba(26,115,232,0.3);
+        }
+        .geo-btn:hover {
+            background: #1557b0;
         }
         .forecast-title {
             font-size: 18px;
@@ -110,9 +126,11 @@
 <body>
 
     <div class="container">
-        <h1 id="city">Визначення локації...</h1>
-        <div class="country" id="country">Будь ласка, дозвольте доступ до геопозиції</div>
+        <h1 id="city">Погода у вашому місті</h1>
+        <div class="country" id="country">Натисніть кнопку нижче, щоб дозволити геолокацію</div>
         
+        <button class="geo-btn" id="geoBtn" onclick="requestLocation()">Визначити мою погоду</button>
+
         <div class="current-temp" id="temp">--°C</div>
         
         <div class="details">
@@ -122,7 +140,7 @@
 
         <div class="forecast-title">Прогноз із часовими інтервалами</div>
         <div class="forecast-list" id="forecast">
-            <div class="forecast-item">Очікування доступу до геолокації...</div>
+            <div class="forecast-item">Очікування натискання кнопки...</div>
         </div>
 
         <div class="footer">
@@ -142,8 +160,8 @@
                 51: "Невеликий дощ",
                 53: "Помірний дощ",
                 55: "Сильний дощ",
-                61: "Дощ з",
-                63: "Дощ",
+                61: "Дощ",
+                63: "Помірний дощ",
                 65: "Злива",
                 71: "Невеликий сніг",
                 73: "Сніг",
@@ -153,7 +171,6 @@
             return weatherCodes[code] ? weatherCodes[code] : "Змішано";
         }
 
-        // Аналізуємо погодинні дані, щоб знайти точний час опадів (наприклад, "Дощ з 14:00 по 18:00")
         function getHourlyRainTime(hourlyData, targetDayIndex) {
             const times = hourlyData.time;
             const codes = hourlyData.weather_code;
@@ -182,12 +199,14 @@
             return null;
         }
 
-        async function initGeolocationWeather() {
+        function requestLocation() {
             if (!navigator.geolocation) {
-                document.getElementById('city').innerText = "Помилка";
-                document.getElementById('country').innerText = "Браузер не підтримує геолокацію";
+                alert("Ваш браузер не підтримує геолокацію");
                 return;
             }
+
+            document.getElementById('city').innerText = "Шукаємо ваше місце...";
+            document.getElementById('country').innerText = "Зачекайте секунду";
 
             navigator.geolocation.getCurrentPosition(
                 async (position) => {
@@ -195,7 +214,6 @@
                     const lon = position.coords.longitude;
 
                     try {
-                        // Отримуємо назву міста через безкоштовне зворотне геокодування
                         const geoResponse = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&accept-language=uk`);
                         const geoData = await geoResponse.json();
                         
@@ -204,19 +222,17 @@
 
                         document.getElementById('city').innerText = city;
                         document.getElementById('country').innerText = country;
+                        document.getElementById('geoBtn').style.display = 'none'; // ховаємо кнопку після успіху
 
-                        // Запитуємо погодинні та денні дані з Open-Meteo
                         const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m&hourly=weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto`;
                         const weatherResponse = await fetch(weatherUrl);
                         const weatherData = await weatherResponse.json();
 
-                        // Поточні значення
                         const current = weatherData.current;
                         document.getElementById('temp').innerText = `${Math.round(current.temperature_2m)}°C`;
                         document.getElementById('wind').innerText = `Вітер: ${current.wind_speed_10m} км/год`;
                         document.getElementById('humidity').innerText = `Вологість: ${current.relative_humidity_2m}%`;
 
-                        // Формуємо прогноз із розширеним часом опадів
                         const daily = weatherData.daily;
                         let forecastHTML = '';
 
@@ -228,7 +244,6 @@
                             const maxT = Math.round(daily.temperature_2m_max[i]);
                             const minT = Math.round(daily.temperature_2m_min[i]);
 
-                            // Перевіряємо, чи є дощ у цей день за годинами
                             let desc = getHourlyRainTime(weatherData.hourly, i);
                             if (!desc) {
                                 desc = getWeatherDescription(daily.weather_code[i]);
@@ -247,20 +262,18 @@
 
                     } catch (err) {
                         console.error(err);
-                        document.getElementById('city').innerText = "Помилка даних";
+                        document.getElementById('city').innerText = "Помилка";
                         document.getElementById('country').innerText = "Не вдалося завантажити погоду";
                     }
                 },
                 (error) => {
                     console.warn(error);
                     document.getElementById('city').innerText = "Доступ заборонено";
-                    document.getElementById('country').innerText = "Увімкніть геолокацію в браузері";
-                    document.getElementById('forecast').innerHTML = `<div class="forecast-item">Будь ласка, дозвольте доступ до геолокації, щоб побачити погоду.</div>`;
+                    document.getElementById('country').innerText = "Дозвольте доступ до геолокації в налаштуваннях";
+                    document.getElementById('forecast').innerHTML = `<div class="forecast-item">Будь ласка, натисніть кнопку ще раз і дозвольте геолокацію.</div>`;
                 }
             );
         }
-
-        initGeolocationWeather();
     </script>
 </body>
 </html>
