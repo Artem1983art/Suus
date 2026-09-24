@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Погода за геолокацією</title>
+    <title>Погода за GPS</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -126,10 +126,10 @@
 <body>
 
     <div class="container">
-        <h1 id="city">Погода у вашому місті</h1>
-        <div class="country" id="country">Натисніть кнопку нижче, щоб дозволити геолокацію</div>
+        <h1 id="city">Погода за GPS</h1>
+        <div class="country" id="country">Натисніть кнопку, щоб увімкнути GPS</div>
         
-        <button class="geo-btn" id="geoBtn" onclick="requestLocation()">Визначити мою погоду</button>
+        <button class="geo-btn" id="geoBtn" onclick="getGPSWeather()">Визначити через GPS</button>
 
         <div class="current-temp" id="temp">--°C</div>
         
@@ -140,7 +140,7 @@
 
         <div class="forecast-title">Прогноз із часовими інтервалами</div>
         <div class="forecast-list" id="forecast">
-            <div class="forecast-item">Очікування натискання кнопки...</div>
+            <div class="forecast-item">Очікування активації GPS...</div>
         </div>
 
         <div class="footer">
@@ -199,14 +199,20 @@
             return null;
         }
 
-        function requestLocation() {
+        function getGPSWeather() {
             if (!navigator.geolocation) {
-                alert("Ваш браузер не підтримує геолокацію");
+                alert("GPS не підтримується вашим пристроєм");
                 return;
             }
 
-            document.getElementById('city').innerText = "Шукаємо ваше місце...";
-            document.getElementById('country').innerText = "Зачекайте секунду";
+            document.getElementById('city').innerText = "Отримуємо GPS...";
+            document.getElementById('country').innerText = "Будь ласка, зачекайте";
+
+            const options = {
+                enableHighAccuracy: true,
+                timeout: 15000,
+                maximumAge: 0
+            };
 
             navigator.geolocation.getCurrentPosition(
                 async (position) => {
@@ -222,7 +228,7 @@
 
                         document.getElementById('city').innerText = city;
                         document.getElementById('country').innerText = country;
-                        document.getElementById('geoBtn').style.display = 'none'; // ховаємо кнопку після успіху
+                        document.getElementById('geoBtn').style.display = 'none';
 
                         const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m&hourly=weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&timezone=auto`;
                         const weatherResponse = await fetch(weatherUrl);
@@ -263,15 +269,16 @@
                     } catch (err) {
                         console.error(err);
                         document.getElementById('city').innerText = "Помилка";
-                        document.getElementById('country').innerText = "Не вдалося завантажити погоду";
+                        document.getElementById('country').innerText = "Не вдалося отримати дані погоди";
                     }
                 },
                 (error) => {
                     console.warn(error);
-                    document.getElementById('city').innerText = "Доступ заборонено";
-                    document.getElementById('country').innerText = "Дозвольте доступ до геолокації в налаштуваннях";
-                    document.getElementById('forecast').innerHTML = `<div class="forecast-item">Будь ласка, натисніть кнопку ще раз і дозвольте геолокацію.</div>`;
-                }
+                    document.getElementById('city').innerText = "GPS недоступний";
+                    document.getElementById('country').innerText = "Увімкніть геолокацію в налаштуваннях телефону";
+                    document.getElementById('forecast').innerHTML = `<div class="forecast-item">Дозвольте додатку доступ до GPS та спробуйте знову.</div>`;
+                },
+                options
             );
         }
     </script>
